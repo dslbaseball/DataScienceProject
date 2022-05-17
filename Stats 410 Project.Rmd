@@ -1,0 +1,98 @@
+---
+title: "Cluster Analysis in Baseball"
+author: "Daniel Levin"
+date: "5/10/2022"
+output: word_document
+bibliography: /Users/daniellevin/Desktop/biblio.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Lahman)
+library(cluster)
+library(factoextra)
+library(dplyr)
+library(tidyverse)
+library(lemon)
+knit_print.data.frame = lemon_print
+options(ggrepel.max.overlaps = 10)
+```
+
+# **Introduction**
+
+The data I will be using is the "Batting" subset of the Lahman baseball database which is a package in R. It is one of the most comprehensive collections of baseball data that there is. The research question that I will be trying to answer is "Was there a top tier of hitters in Major League Baseball in 2019 and if so, who were they?". I believe cluster analysis will be a good match for this because it can take different inputs and group them together by their similar attributes.
+
+# **Data Science Method**
+
+Cluster analysis has a lot of different methods for examining data in order to reveal different groups or clusters among a set of observations. Although there are different types of clustering, for this particular analysis, I will use k-mean clustering which "seeks to partition a set of data into a specified number of groups, *k*, by minimizing some numerical criterion, low values of which are considered indicative of a 'good' solution" (@everitt_handbook_2010). According to @noauthor_mathematics_nodate, this method uses inputs of x (data points) and k (number of clusters). After the centers of each cluster are chosen, points are assigned to clusters by calculating the distances between each centroid and finding the minimum. The formula for calculating the distance between the data point and the center is below:
+
+$$
+d(p,q) = \sqrt{(q_1 - p_1)^2 + (q_2 - p_2)^2}
+$$
+Once the distance from all of the data points are found and each point is assigned to a cluster, the centroids are found again using the formula below where $S_i$ is the set of all points assigned to the *ith* cluster.
+
+$$
+c_i = \frac1{|S_i|} \sum_{x_i\epsilon S_i} x_i
+$$
+All of this math can be done by an algorithm in R and that is what I will show in the next sections.
+
+## **Illustration of Method**
+
+Here is a quick example of how k-means clustering works with the USArrests dataset from R. After cleaning up the dataset, I used the "fviz_nbclust" function to determine how many clusters would be appropriate for this model. Then by using the kmeans function, I was able to cluster the data. In order to get a visual of the output, I used the fviz_cluster (graph) and aggregate (table) commands (@zach_k-means_2020).
+
+```{r, echo=FALSE}
+df = USArrests
+df = na.omit(df)
+df = scale(df)
+head(df, render=lemon_print)
+
+fviz_nbclust(df, kmeans, method = "wss")
+# optimal clusters is 4
+
+set.seed(1) # to ensure it is repeatable
+km = kmeans(df, centers=4, nstart=25)
+
+fviz_cluster(km, data = df, repel=TRUE) # cluster visual
+aggregate(USArrests, by=list(cluster=km$cluster), mean) # table of summary
+```
+
+# **Novel Analysis**
+
+# Description of Data and Exploratory Data Analysis
+
+Here is a [link](https://www.kaggle.com/datasets) to an older version of the dataset that I am using. For this particular analysis, I used the Lahman package in R. In order to clean the data and not have too many datapoints, I filtered the dataset so that it would only include the 2019 season and guarantees that each player played in 100 games or more in that season.
+
+*Print out of the first 20 rows of filtered Batting dataset*
+
+```{r, echo=FALSE, render=lemon_print}
+mydata = Batting
+mydata = na.omit(Batting)
+mydata = filter(Batting, Batting$yearID == 2019 & Batting$G > 100)
+mydata = select(mydata, c(playerID:RBI))
+head(mydata, n = 20)
+```
+# Actual Analysis
+
+Below is where I further trimmed down my data and selected the variables that I would be analyzing with the clusters. I chose hits, doubles, home runs, and runs batted in as the variables to determine my clusters. To me, those are the best indication of what makes a good hitter and I was curious how R would cluster these hitters together and make a "top tier" of hitters. Like the example I showed above, I used "fviz_nbclust" to produce a graph that showed me the ideal number of clusters for the dataset, "kmeans" to actually cluster the data, and "fviz_cluster"/"aggregate" to create visualizations of the results. The last two lines of code creates a new data frame with the clusters each player is assigned to and then filters it by the cluster that I determined to be the top tier of hitters from 2019.
+
+```{r, echo=FALSE}
+row.names(mydata) = mydata$playerID # changed row names to player names
+mydata = select(mydata, c("H", "X2B", "HR", "RBI")) # select columns needed for cluster analysis
+set.seed(410) # to ensure data is repeatable
+fviz_nbclust(mydata, kmeans, method = "wss") # choose number of clusters based off where "elbow" graph
+clust = kmeans(mydata, 6) # actual cluster formation
+clusttable = aggregate(mydata,by=list(clust$cluster),FUN=mean) # table of summary data for clusters
+clusttable
+fviz_cluster(clust, data = mydata, repel = TRUE) # cluster visual
+
+clustdata = data.frame(mydata, clust$cluster) # add clusters to data frame
+topcluster = filter(clustdata, clustdata$clust.cluster == 2) # shows data of "top" cluster
+topcluster
+```
+
+
+# Results and Conditions
+
+Based off of the clusttable data above, cluster #2 is the cluster that contains the top hitters from 2019 and has `r nrow(topcluster)` players in it out of the total `r nrow(mydata)` in the filtered dataset. This cluster has the highest average hits, doubles, home runs, and runs batted in. Using my knowledge of baseball and the hitters at the top of the leaderboards from 2019, I believe this clustering model was accurate in identifying the top tier of hitters in Major League Baseball in the year 2019.
+
+# **References**
