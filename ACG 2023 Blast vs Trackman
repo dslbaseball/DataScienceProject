@@ -1,0 +1,30 @@
+---
+title: "ACG 2023 Blast vs Trackman"
+output: html_notebook
+---
+
+```{r}
+data = read_xlsx("/Users/daniellevin/Downloads/2023 Area Code Data.xlsx")
+data = filter(data, data$BBE >= 5)
+cor(data$AvgEV, data$AvgRA)
+# R = 0.21 - BBE >= 5
+# R = 0.19 - ALL
+
+ggscatter(data, x = "AvgRA", y = "AvgEV", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Avg Exit Velocity (MPH)", ylab = "Avg Rotational Acceleration (g)")
+```
+
+
+```{r}
+model = lm(data=data, AvgEV~AvgRA)
+model
+summary(model)
+# y = 0.2352x + 76.8465 - BBE >= 5
+# y = 0.3148x + 74.8550 - ALL
+
+ggplot(data, aes(x=AvgRA, y=AvgEV))+
+  geom_point()+
+  geom_smooth(method=lm)
+```
